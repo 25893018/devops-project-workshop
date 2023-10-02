@@ -59,7 +59,7 @@ resource "aws_vpc" "dpw-vpc" {
      }
    }
   
-  //Create a Subnet 
+  //Create a Subnet  -1 
 resource "aws_subnet" "dpw-public_subent_01" {
     vpc_id = aws_vpc.dpw-vpc.id
     cidr_block = "10.1.1.0/24"
@@ -69,6 +69,18 @@ resource "aws_subnet" "dpw-public_subent_01" {
       Name = "dpw-public_subent_01"
     }
 }
+
+ //Create a Subnet  -2
+resource "aws_subnet" "dpw-public_subent_02" {
+    vpc_id = aws_vpc.dpw-vpc.id
+    cidr_block = "10.1.2.0/24"
+    map_public_ip_on_launch = "true"
+    availability_zone = "ap-south-1b"
+    tags = {
+      Name = "dpw-public_subent_02"
+    }
+}
+
 
 //Creating an Internet Gateway 
 resource "aws_internet_gateway" "dpw-igw" {
@@ -90,9 +102,28 @@ resource "aws_route_table" "dpw-public-rt" {
     }
 }
 
-// Associate subnet with route table
+// Associate subnet-01 with route table
 
 resource "aws_route_table_association" "dpw-rta-public-subent-1" {
     subnet_id = aws_subnet.dpw-public_subent_01.id
     route_table_id = aws_route_table.dpw-public-rt.id
 }
+
+// Associate subnet-02 with route table
+
+resource "aws_route_table_association" "dpw-rta-public-subent-2" {
+    subnet_id = aws_subnet.dpw-public_subent_02.id
+    route_table_id = aws_route_table.dpw-public-rt.id
+}
+
+ module "sgs" {
+    source = "../sg_eks"
+    vpc_id     =     aws_vpc.dpw-vpc.id
+ }
+
+  module "eks" {
+       source = "../eks"
+       vpc_id     =     aws_vpc.dpw-vpc.id
+       subnet_ids = [aws_subnet.dpw-public_subent_01.id,aws_subnet.dpw-public_subent_02.id]
+       sg_ids = module.sgs.security_group_public
+ }
